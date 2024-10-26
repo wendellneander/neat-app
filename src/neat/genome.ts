@@ -87,7 +87,6 @@ export default class Genome {
         // connect the connections to node
         this.connections.push(new Connection(conn.fromNode, newNode, 1.0))
         this.connections.push(new Connection(newNode, conn.toNode, conn.weight))
-        console.log(`mutate new connections: ${this.connections.length}`)
       }
     }
 
