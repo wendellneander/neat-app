@@ -67,6 +67,7 @@ export class Evolution {
       connectionMutationRate: this.connectionMutationRate,
     })
     this.neat.bestGenome = this.neat.population[0].clone()
+    console.log(this)
   }
 
   initializeChart() {
@@ -151,20 +152,26 @@ export class Evolution {
     // Botão Start Evolution
     const startButton = document.createElement('button')
     startButton.textContent = 'Start Evolution'
-    startButton.onclick = () => this.startEvolution()
+    startButton.onclick = () => {
+      if (this.isEvolutionRunning) {
+        this.pauseEvolution()
+        startButton.textContent = 'Resume Evolution'
+      } else {
+        this.startEvolution()
+        startButton.textContent = 'Pause Evolution'
+      }
+      
+    }
 
     controlsDiv.appendChild(startButton)
-
-    // Botão Pause
-    const pauseButton = document.createElement('button')
-    pauseButton.textContent = 'Pause'
-    pauseButton.onclick = () => this.pauseEvolution()
-    controlsDiv.appendChild(pauseButton)
 
     // Botão Reset
     const resetButton = document.createElement('button')
     resetButton.textContent = 'Reset'
-    resetButton.onclick = () => this.resetEvolution()
+    resetButton.onclick = () => {
+      this.resetEvolution()
+      startButton.textContent = 'Start Evolution'
+    }
     controlsDiv.appendChild(resetButton)
 
     // Adiciona o div de controles ao div principal
@@ -409,7 +416,7 @@ export class Evolution {
     
     this.networkCtx.clearRect(0, 0, this.networkCanvas.width, this.networkCanvas.height)
 
-    const layerSpacing = this.networkCanvas.width / 4
+    const layerSpacing = this.networkCanvas.width / (3 + 2)
     const inputY = this.networkCanvas.height / 3
     const hiddenY = this.networkCanvas.height / 2
     const outputY = (this.networkCanvas.height * 2) / 3

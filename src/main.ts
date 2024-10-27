@@ -6,7 +6,7 @@ const params: EvolutionParams = {
   canvasHeight: 400,
   populationCanvasWidth: 500,
   populationCanvasHeight: 400,
-  populationSize: 10,
+  populationSize: 50,
   targetFitness: 95,
   weightMutationRate: 0,
   nodeMutationRate: 0,
