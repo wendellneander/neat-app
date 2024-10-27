@@ -8,8 +8,11 @@ export type EvolutionParams = {
   canvasHeight: number
   populationCanvasWidth: number
   populationCanvasHeight: number
-  solutionFitness: number
+  targetFitness: number
   populationSize: number
+  weightMutationRate: number
+  nodeMutationRate: number
+  connectionMutationRate: number
 }
 
 export class Evolution {
@@ -21,29 +24,34 @@ export class Evolution {
   private populationCtx!: CanvasRenderingContext2D
   private populationCanvasWidth: number
   private populationCanvasHeight: number
-  private paramsInputsView!: HTMLDivElement
-  private statisticsView!: HTMLDivElement
-  view!: string
+  private statisticsDisplay!: HTMLDivElement
+  view!: HTMLElement
 
   private neat!: NEAT
   private isEvolutionRunning: boolean
   private evolutionInterval!: number
   private fitnessChart: any
-  private solutionFitness: number
+  private targetFitness: number
   private populationSize: number
-  
+  private weightMutationRate: number
+  private nodeMutationRate: number
+  private connectionMutationRate: number
 
-  constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, solutionFitness, populationSize }: EvolutionParams) {
+  constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, weightMutationRate, nodeMutationRate }: EvolutionParams) {
     this.isEvolutionRunning = false
-    this.solutionFitness = solutionFitness
+    this.targetFitness = targetFitness
     this.populationSize = populationSize
     this.canvasWidth = canvasWidth
     this.canvasHeight = canvasHeight
     this.populationCanvasWidth = populationCanvasWidth
     this.populationCanvasHeight = populationCanvasHeight
+
+    this.weightMutationRate = weightMutationRate
+    this.nodeMutationRate = nodeMutationRate
+    this.connectionMutationRate = populationCanvasHeight
     
-    this.initializeNEAT()
     this.createView()
+    this.initializeNEAT()
     this.initializeChart()
   }
 
@@ -54,18 +62,19 @@ export class Evolution {
       outputSize: 1,
       canvasWidth: this.networkCanvas?.clientWidth || 0,
       canvasHeight: this.networkCanvas?.clientHeight || 0,
-      weightMutationRate: 0.3,
-      nodeMutationRate: 0.5,
-      connectionMutationRate: 0.6,
+      weightMutationRate: this.weightMutationRate,
+      nodeMutationRate: this.nodeMutationRate,
+      connectionMutationRate: this.connectionMutationRate,
     })
     this.neat.bestGenome = this.neat.population[0].clone()
+    console.log(this)
   }
 
   initializeChart() {
     if (!this.view) {
       throw new Error('No view created. Please create a view first.')
     }
-    Chart.register(...registerables);
+    Chart.register(...registerables)
     this.fitnessChart = new Chart(this.populationCtx, {
       type: "line",
       data: {
@@ -102,48 +111,247 @@ export class Evolution {
   }
 
   createView() {
-    this.createCanvasView()
-    this.createPopulationCanvasView()
-    this.createParamsInputsView()
-    this.createStatisticsView()
-    this.view = `<div>TODO: view<div>`
+    const networkVisualization = this.createNetworkView()
+    const populationVisualization = this.createPopulationView()
+    const statisticsVisualization = this.createStatisticsView()
+    const paramsInputVisualization = this.createParamsInputView()
+
+    const containerDiv = document.createElement('div')
+    containerDiv.className = 'container'
+
+    containerDiv.appendChild(networkVisualization)
+    containerDiv.appendChild(populationVisualization)
+    containerDiv.appendChild(statisticsVisualization)
+    containerDiv.appendChild(paramsInputVisualization)
+
+    this.view = containerDiv
   }
 
-  createCanvasView() {
+  createNetworkView(): HTMLElement {
+    // Cria o div principal
+    const visualizationDiv = document.createElement('div')
+    visualizationDiv.className = 'visualization'
+
+    // Cria o título
+    const title = document.createElement('h2')
+    title.textContent = 'Network Visualization'
+    visualizationDiv.appendChild(title)
+
+    // Cria o canvas
     this.networkCanvas = <HTMLCanvasElement>document.createElement("canvas")
     this.networkCtx = <CanvasRenderingContext2D>this.networkCanvas.getContext("2d")
     this.networkCanvas.width = this.canvasWidth
     this.networkCanvas.height = this.canvasHeight
+    this.networkCanvas.id = 'networkCanvas'
+    visualizationDiv.appendChild(this.networkCanvas)
+
+    // Cria o div de controles
+    const controlsDiv = document.createElement('div')
+    controlsDiv.className = 'controls'
+
+    // Botão Start Evolution
+    const startButton = document.createElement('button')
+    startButton.textContent = 'Start Evolution'
+    startButton.onclick = () => {
+      if (this.isEvolutionRunning) {
+        this.pauseEvolution()
+        startButton.textContent = 'Resume Evolution'
+      } else {
+        this.startEvolution()
+        startButton.textContent = 'Pause Evolution'
+      }
+      
+    }
+
+    controlsDiv.appendChild(startButton)
+
+    // Botão Reset
+    const resetButton = document.createElement('button')
+    resetButton.textContent = 'Reset'
+    resetButton.onclick = () => {
+      this.resetEvolution()
+      startButton.textContent = 'Start Evolution'
+    }
+    controlsDiv.appendChild(resetButton)
+
+    // Adiciona o div de controles ao div principal
+    visualizationDiv.appendChild(controlsDiv)
+    return visualizationDiv
   }
 
-  createPopulationCanvasView() {
+  createPopulationView() {
+    // Cria o div principal para a visualização
+    const visualizationDiv = document.createElement('div')
+    visualizationDiv.className = 'visualization'
+  
+    // Cria o título "Population Fitness"
+    const title = document.createElement('h2')
+    title.textContent = 'Population Fitness'
+    visualizationDiv.appendChild(title)
+  
+    // Cria o elemento canvas com id "populationCanvas"
     this.populationCanvas = <HTMLCanvasElement>document.createElement("canvas")
     this.populationCtx = <CanvasRenderingContext2D>this.populationCanvas.getContext("2d")
     this.populationCanvas.width = this.populationCanvasWidth
     this.populationCanvas.height = this.populationCanvasHeight
+    this.networkCanvas.id = 'populationCanvas'
+    visualizationDiv.appendChild(this.populationCanvas)
+    return visualizationDiv
   }
 
-  createParamsInputsView() {
-    this.paramsInputsView = <HTMLDivElement>document.createElement("div")
-    // TODO: createParamsInputs
+  createParamsInputView(): HTMLElement {
+    // Div principal para visualização
+    const visualizationDiv = document.createElement('div')
+    visualizationDiv.className = 'visualization'
+
+    // Div para os controles de parâmetros
+    const parameterControlsDiv = document.createElement('div')
+    parameterControlsDiv.className = 'parameter-controls'
+
+    // Título dos parâmetros
+    const parameterTitle = document.createElement('h3')
+    parameterTitle.textContent = 'Simulation Parameters'
+    parameterControlsDiv.appendChild(parameterTitle)
+
+    // Controle para Population Size
+    const populationLabel = document.createElement('label')
+    populationLabel.textContent = 'Population Size: '
+    const populationInput = document.createElement('input')
+    populationInput.id = 'populationSize'
+    populationInput.type = 'number'
+    populationInput.min = '10'
+    populationInput.max = '200'
+    populationInput.value = '50'
+    populationInput.onchange = (e: any) => {
+      const parsed = parseInt(e.target?.value)
+      this.populationSize = parsed
+      console.log('new population size:', parsed)
+    }
+    populationLabel.appendChild(populationInput)
+    parameterControlsDiv.appendChild(populationLabel)
+
+    // Controle para Target Solution Fitness
+    const fitnessLabel = document.createElement('label')
+    fitnessLabel.textContent = 'Target Solution Fitness: '
+    const fitnessInput = document.createElement('input')
+    fitnessInput.id = 'targetFitness'
+    fitnessInput.type = 'number'
+    fitnessInput.step = '0.01'
+    fitnessInput.min = '0'
+    fitnessInput.max = '1'
+    fitnessInput.value = '0.95'
+    fitnessInput.onchange = (e: any) => {
+      const parsed = parseFloat(e.target?.value)
+      this.targetFitness = parsed
+      console.log('new target fitness value:', parsed)
+    }
+    fitnessLabel.appendChild(fitnessInput)
+    parameterControlsDiv.appendChild(fitnessLabel)
+
+    // Adiciona o div de controles de parâmetros ao div principal
+    visualizationDiv.appendChild(parameterControlsDiv)
+
+    // Div para os controles de mutação
+    const mutationControlsDiv = document.createElement('div')
+    mutationControlsDiv.className = 'mutation-controls'
+
+    // Título dos controles de mutação
+    const mutationTitle = document.createElement('h3')
+    mutationTitle.textContent = 'Mutation Rates'
+    mutationControlsDiv.appendChild(mutationTitle)
+
+    // Controle para Weight Mutation Rate
+    const weightLabel = document.createElement('label')
+    weightLabel.textContent = 'Weight Mutation Rate: '
+    const weightInput = document.createElement('input')
+    weightInput.id = 'weightMutationRate'
+    weightInput.type = 'number'
+    weightInput.step = '0.01'
+    weightInput.min = '0'
+    weightInput.max = '1'
+    weightInput.value = '0.8'
+    weightInput.onchange = (e: any) => {
+      const parsed = parseFloat(e.target?.value)
+      this.weightMutationRate = parsed
+      console.log('new weight mutation rate:', parsed)
+    }
+    weightLabel.appendChild(weightInput)
+    mutationControlsDiv.appendChild(weightLabel)
+
+    // Controle para Node Mutation Rate
+    const nodeLabel = document.createElement('label')
+    nodeLabel.textContent = 'Node Mutation Rate: '
+    const nodeInput = document.createElement('input')
+    nodeInput.id = 'nodeMutationRate'
+    nodeInput.type = 'number'
+    nodeInput.step = '0.01'
+    nodeInput.min = '0'
+    nodeInput.max = '1'
+    nodeInput.value = '0.3'
+    nodeInput.onchange = (e: any) => {
+      const parsed = parseFloat(e.target?.value)
+      this.nodeMutationRate = parsed
+      console.log('new node mutation rate:', parsed)
+    }
+    nodeLabel.appendChild(nodeInput)
+    mutationControlsDiv.appendChild(nodeLabel)
+
+    // Controle para Connection Mutation Rate
+    const connectionLabel = document.createElement('label')
+    connectionLabel.textContent = 'Connection Mutation Rate: '
+    const connectionInput = document.createElement('input')
+    connectionInput.id = 'connectionMutationRate'
+    connectionInput.type = 'number'
+    connectionInput.step = '0.01'
+    connectionInput.min = '0'
+    connectionInput.max = '1'
+    connectionInput.value = '0.6'
+    connectionInput.onchange = (e: any) => {
+      const parsed = parseFloat(e.target?.value)
+      this.connectionMutationRate = parsed
+      console.log('new connection mutation rate:', parsed)
+    }
+    connectionLabel.appendChild(connectionInput)
+    mutationControlsDiv.appendChild(connectionLabel)
+
+    // Adiciona o div de controles de mutação ao div principal
+    visualizationDiv.appendChild(mutationControlsDiv)
+    return visualizationDiv
   }
 
-  createStatisticsView() {
-    // TODO: createStatisticsView
-    this.statisticsView = <HTMLDivElement>document.createElement("div")
+  createStatisticsView(): HTMLElement {
+    // Cria o div principal para as estatísticas
+    const statsDiv = document.createElement('div')
+    statsDiv.className = 'stats'
+
+    // Cria o título "Statistics"
+    const title = document.createElement('h2')
+    title.textContent = 'Statistics'
+    statsDiv.appendChild(title)
+
+    // Cria o div para exibir as estatísticas
+    const statsDisplay = document.createElement('div')
+    statsDisplay.id = 'stats-display'
+    statsDiv.appendChild(statsDisplay)
+    this.statisticsDisplay = statsDisplay
+    return statsDiv
   }
 
-  updateStatsView() {
+  updateStatsDisplay() {
     const stats = []
     stats.push(`Generation: ${this.neat.generation}`)
     stats.push(`Best Fitness: ${this.neat.bestGenome?.fitness.toFixed(4)}`)
     stats.push(`Population Size: ${this.neat.population.length}`)
     stats.push(`Nodes: ${this.neat.bestGenome?.nodes.length}`)
     stats.push(`Connections: ${this.neat.bestGenome?.connections.length}`)
-    this.statisticsView.textContent = stats.join('\n')
+    this.statisticsDisplay.textContent = stats.join('\n')
   }
 
   updateChart() {
+    if (!this.fitnessChart) {
+      throw new Error('no fitness chart created')
+    }
+
     const avgFitness =
       this.neat.population.reduce((sum, genome) => sum + genome.fitness, 0) /
       this.neat.population.length
@@ -175,9 +383,9 @@ export class Evolution {
       this.neat.evolve()
       this.drawNetwork(this.neat.bestGenome)
       this.updateChart()
-      this.updateStatsView()
+      this.updateStatsDisplay()
 
-      if ((this.neat.bestGenome?.fitness || 0) >= this.solutionFitness) {
+      if ((this.neat.bestGenome?.fitness || 0) >= this.targetFitness) {
         this.pauseEvolution()
         alert("Solution found!")
       }
@@ -198,7 +406,7 @@ export class Evolution {
       this.fitnessChart.update()
     }
     this.drawNetwork(this.neat.population[0])
-    this.updateStatsView()
+    this.updateStatsDisplay()
   }
 
   drawNetwork(genome: Genome | null) {
@@ -208,7 +416,7 @@ export class Evolution {
     
     this.networkCtx.clearRect(0, 0, this.networkCanvas.width, this.networkCanvas.height)
 
-    const layerSpacing = this.networkCanvas.width / 4
+    const layerSpacing = this.networkCanvas.width / (3 + 2)
     const inputY = this.networkCanvas.height / 3
     const hiddenY = this.networkCanvas.height / 2
     const outputY = (this.networkCanvas.height * 2) / 3
