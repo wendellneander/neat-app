@@ -472,7 +472,9 @@ export class Evolution {
       this.networkCtx.fill()
       this.networkCtx.font = "12px Arial";
       this.networkCtx.fillStyle = "black";
-      this.networkCtx.fillText(`${node.id}`,node.x - 4,node.y + 4);
+      const offsetX = node.id > 9 ? 6 : 4
+      const offsetY = node.id > 9 ? 5 : 4
+      this.networkCtx.fillText(`${node.id}`,node.x - offsetX,node.y + offsetY);
     })
   }
 }
