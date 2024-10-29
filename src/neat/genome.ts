@@ -5,6 +5,8 @@ type GenomeParams = {
   weightMutationRate: number
   nodeMutationRate: number
   connectionMutationRate: number
+  canvasWidth: number
+  canvasHeight: number
 }
 
 export default class Genome {
@@ -16,11 +18,15 @@ export default class Genome {
   weightMutationRate: number
   nodeMutationRate: number
   connectionMutationRate: number
+  canvasWidth: number
+  canvasHeight: number
 
   constructor({
     weightMutationRate,
     nodeMutationRate,
     connectionMutationRate,
+    canvasWidth,
+    canvasHeight
   }: GenomeParams) {
     Genome.counter++
     this.id = Genome.counter
@@ -30,6 +36,8 @@ export default class Genome {
     this.weightMutationRate = weightMutationRate
     this.nodeMutationRate = nodeMutationRate
     this.connectionMutationRate = connectionMutationRate
+    this.canvasWidth = canvasWidth
+    this.canvasHeight = canvasHeight
   }
 
   inputNodes() {
@@ -49,6 +57,8 @@ export default class Genome {
       weightMutationRate: this.weightMutationRate,
       nodeMutationRate: this.nodeMutationRate,
       connectionMutationRate: this.connectionMutationRate,
+      canvasHeight: this.canvasHeight,
+      canvasWidth: this.canvasWidth
     })
     clonedGenome.nodes = this.nodes.map((node) => {
       const newNode = new Node(node.id, node.type, node.x, node.y, node.value)
@@ -68,6 +78,8 @@ export default class Genome {
   }
 
   mutate() {
+    let shouldUpdateCoordinates: boolean = false
+
     if (Math.random() < this.weightMutationRate) {
       this.connections.forEach((conn) => {
         if (Math.random() < 0.1) {
@@ -91,6 +103,8 @@ export default class Genome {
         // connect the connections to node
         this.connections.push(new Connection(conn.fromNode, newNode, 1.0))
         this.connections.push(new Connection(newNode, conn.toNode, conn.weight))
+
+        shouldUpdateCoordinates = true
       }
     }
 
@@ -99,7 +113,54 @@ export default class Genome {
       const to = this.nodes[Math.floor(Math.random() * this.nodes.length)]
       if (from && to && from.id !== to.id) {
         this.connections.push(new Connection(from, to, Math.random() * 2 - 1))
+        shouldUpdateCoordinates = true
       }
     }
+
+    if (shouldUpdateCoordinates) {
+      this.updateCoordinates()
+    }
+  }
+
+  updateCoordinates() {
+    const inputLength = this.hiddenNodes().length
+    const hiddenLength = this.hiddenNodes().length
+    const outputLength = this.hiddenNodes().length
+
+    const layerX = this.canvasWidth / 4
+    const inputY = this.canvasHeight / (inputLength + 2)
+    const outputY = this.canvasHeight / (outputLength + 2)
+    const hiddenY = this.canvasHeight / (hiddenLength + 2)
+
+    
+    let inputIndex = 1
+    let hiddenIndex = 1
+    let outputIndex = 1
+
+    this.nodes.forEach((node: Node) => {
+      if (node.type === NodeTypes.INPUT) {
+        node.x = layerX
+        node.y = inputY * inputIndex
+        inputIndex++
+      } else if (node.type === NodeTypes.HIDDEN) {
+        node.x = layerX * 2
+        node.y = hiddenY * hiddenIndex
+        hiddenIndex++
+      } else {
+        node.x = layerX * 3
+        node.y = outputY * outputIndex
+        outputIndex++
+      }
+
+      // update connections
+      this.connections.filter(conn => conn.fromNode.id === node.id).map(conn => {
+        conn.fromNode = node
+        return conn
+      })
+      this.connections.filter(conn => conn.toNode.id === node.id).map(conn => {
+        conn.toNode = node
+        return conn
+      })
+    })
   }
 }

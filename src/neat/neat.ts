@@ -34,7 +34,7 @@ export default class NEAT {
     this.generation = 0
     this.bestGenome = null
 
-    const layerSpacing = canvasWidth / 4
+    const layerX = canvasWidth / 4
     const inputY = canvasHeight / 3
     const outputY = (canvasHeight * 2) / 3
 
@@ -43,11 +43,13 @@ export default class NEAT {
         weightMutationRate,
         nodeMutationRate,
         connectionMutationRate,
+        canvasWidth,
+        canvasHeight
       })
 
       for (let j = 0; j < inputSize; j++) {
         genome.nodes.push(
-          new Node(genome.nodes.length, NodeTypes.INPUT, layerSpacing, inputY)
+          new Node(genome.nodes.length, NodeTypes.INPUT, layerX, inputY)
         )
       }
 
@@ -56,7 +58,7 @@ export default class NEAT {
           new Node(
             genome.nodes.length,
             NodeTypes.OUTPUT,
-            3 * layerSpacing,
+            2 * layerX,
             outputY
           )
         )

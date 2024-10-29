@@ -1,7 +1,7 @@
 export enum NodeTypes {
   INPUT = "input",
   HIDDEN = "hidden",
-  OUTPUT = "input",
+  OUTPUT = "output",
 }
 
 export default class Node {

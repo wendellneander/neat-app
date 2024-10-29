@@ -1,7 +1,6 @@
 import { Chart, registerables } from "chart.js"
 import Genome from "./genome"
 import NEAT from "./neat"
-import Node, { NodeTypes } from "./node"
 
 export type EvolutionParams = {
   canvasWidth: number
@@ -37,9 +36,9 @@ export class Evolution {
   private nodeMutationRate: number
   private connectionMutationRate: number
   private currentGenome: Genome | null
-  private seeBestGenome: boolean = false
+  private seeBestGenome: boolean = true
 
-  constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, weightMutationRate, nodeMutationRate }: EvolutionParams) {
+  constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, connectionMutationRate, weightMutationRate, nodeMutationRate }: EvolutionParams) {
     this.isEvolutionRunning = false
     this.targetFitness = targetFitness
     this.populationSize = populationSize
@@ -50,7 +49,7 @@ export class Evolution {
 
     this.weightMutationRate = weightMutationRate
     this.nodeMutationRate = nodeMutationRate
-    this.connectionMutationRate = populationCanvasHeight
+    this.connectionMutationRate = connectionMutationRate
     this.currentGenome = null
     
     this.createView()
@@ -180,11 +179,7 @@ export class Evolution {
     const seeBestButton = document.createElement('button')
     seeBestButton.textContent = 'See best'
     seeBestButton.onclick = () => {
-      this.seeBestGenome = !this.seeBestGenome
-      if (this.seeBestGenome) {
-        this.currentGenome = this.neat.bestGenome
-        console.log(this.currentGenome)
-      }
+      this.seeBestGenome = true
     }
     controlsDiv.appendChild(seeBestButton)
 
@@ -196,6 +191,7 @@ export class Evolution {
     genome.onchange = (e: any) => {
       const index = parseInt(e.target.value)
       if (index <= this.neat.population.length) {
+        this.seeBestGenome = false
         this.currentGenome = this.neat.population[index]
         console.log(this.currentGenome)
       } else {
@@ -252,7 +248,7 @@ export class Evolution {
     populationInput.type = 'number'
     populationInput.min = '10'
     populationInput.max = '200'
-    populationInput.value = '50'
+    populationInput.value = `${this.populationSize}`
     populationInput.onchange = (e: any) => {
       const parsed = parseInt(e.target?.value)
       this.populationSize = parsed
@@ -270,7 +266,7 @@ export class Evolution {
     fitnessInput.step = '0.01'
     fitnessInput.min = '0'
     fitnessInput.max = '1'
-    fitnessInput.value = '0.95'
+    fitnessInput.value = `${this.targetFitness}`
     fitnessInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.targetFitness = parsed
@@ -300,7 +296,7 @@ export class Evolution {
     weightInput.step = '0.01'
     weightInput.min = '0'
     weightInput.max = '1'
-    weightInput.value = '0.8'
+    weightInput.value = `${this.weightMutationRate}`
     weightInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.weightMutationRate = parsed
@@ -318,7 +314,7 @@ export class Evolution {
     nodeInput.step = '0.01'
     nodeInput.min = '0'
     nodeInput.max = '1'
-    nodeInput.value = '0.3'
+    nodeInput.value = `${this.nodeMutationRate}`
     nodeInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.nodeMutationRate = parsed
@@ -336,7 +332,7 @@ export class Evolution {
     connectionInput.step = '0.01'
     connectionInput.min = '0'
     connectionInput.max = '1'
-    connectionInput.value = '0.6'
+    connectionInput.value = `${this.connectionMutationRate}`
     connectionInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.connectionMutationRate = parsed
@@ -371,10 +367,11 @@ export class Evolution {
   updateStatsDisplay() {
     const stats = []
     stats.push(`Generation: ${this.neat.generation}`)
-    stats.push(`Best Fitness: ${this.neat.bestGenome?.fitness.toFixed(4)}`)
     stats.push(`Population Size: ${this.neat.population.length}`)
-    stats.push(`Nodes: ${this.neat.bestGenome?.nodes.length}`)
-    stats.push(`Connections: ${this.neat.bestGenome?.connections.length}`)
+    stats.push(`Genome Id: ${this.currentGenome?.id}`)
+    stats.push(`Fitness: ${this.currentGenome?.fitness.toFixed(4)}`)
+    stats.push(`Nodes: ${this.currentGenome?.nodes.length}`)
+    stats.push(`Connections: ${this.currentGenome?.connections.length}`)
     this.statisticsDisplay.textContent = stats.join('\n')
   }
 
@@ -412,6 +409,11 @@ export class Evolution {
     this.isEvolutionRunning = true
     this.evolutionInterval = setInterval(() => {
       this.neat.evolve()
+      
+      if (this.seeBestGenome) {
+        this.currentGenome = this.neat.bestGenome
+      }
+
       this.drawNetwork(this.currentGenome)
       this.updateChart()
       this.updateStatsDisplay()
@@ -447,24 +449,6 @@ export class Evolution {
     
     this.networkCtx.clearRect(0, 0, this.networkCanvas.width, this.networkCanvas.height)
 
-    const layerSpacing = this.networkCanvas.width / (3 + 2)
-    const inputY = this.networkCanvas.height / 3
-    const hiddenY = this.networkCanvas.height / 2
-    const outputY = (this.networkCanvas.height * 2) / 3
-
-    genome.nodes.forEach((node: Node) => {
-      if (node.type === NodeTypes.INPUT) {
-        node.x = layerSpacing
-        node.y = inputY + node.id * 50
-      } else if (node.type === NodeTypes.HIDDEN) {
-        node.x = 2 * layerSpacing
-        node.y = hiddenY + (node.id - 2) * 50
-      } else {
-        node.x = 3 * layerSpacing
-        node.y = outputY
-      }
-    })
-
     genome.connections.forEach((conn) => {
       this.networkCtx.beginPath()
       this.networkCtx.moveTo(conn.fromNode.x, conn.fromNode.y)
@@ -485,7 +469,10 @@ export class Evolution {
           : node.type === "hidden"
           ? "#FFC107"
           : "#F44336"
-          this.networkCtx.fill()
+      this.networkCtx.fill()
+      this.networkCtx.font = "12px Arial";
+      this.networkCtx.fillStyle = "black";
+      this.networkCtx.fillText(`${node.id}`,node.x - 4,node.y + 4);
     })
   }
 }
