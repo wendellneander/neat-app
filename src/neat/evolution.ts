@@ -36,6 +36,8 @@ export class Evolution {
   private weightMutationRate: number
   private nodeMutationRate: number
   private connectionMutationRate: number
+  private currentGenome: Genome | null
+  private seeBestGenome: boolean = false
 
   constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, weightMutationRate, nodeMutationRate }: EvolutionParams) {
     this.isEvolutionRunning = false
@@ -49,6 +51,7 @@ export class Evolution {
     this.weightMutationRate = weightMutationRate
     this.nodeMutationRate = nodeMutationRate
     this.connectionMutationRate = populationCanvasHeight
+    this.currentGenome = null
     
     this.createView()
     this.initializeNEAT()
@@ -67,6 +70,7 @@ export class Evolution {
       connectionMutationRate: this.connectionMutationRate,
     })
     this.neat.bestGenome = this.neat.population[0].clone()
+    this.currentGenome = this.neat.bestGenome
     console.log(this)
   }
 
@@ -160,7 +164,6 @@ export class Evolution {
         this.startEvolution()
         startButton.textContent = 'Pause Evolution'
       }
-      
     }
 
     controlsDiv.appendChild(startButton)
@@ -173,6 +176,34 @@ export class Evolution {
       startButton.textContent = 'Start Evolution'
     }
     controlsDiv.appendChild(resetButton)
+
+    const seeBestButton = document.createElement('button')
+    seeBestButton.textContent = 'See best'
+    seeBestButton.onclick = () => {
+      this.seeBestGenome = !this.seeBestGenome
+      if (this.seeBestGenome) {
+        this.currentGenome = this.neat.bestGenome
+        console.log(this.currentGenome)
+      }
+    }
+    controlsDiv.appendChild(seeBestButton)
+
+    const genome = document.createElement('input')
+    genome.id = 'genome'
+    genome.type = 'number'
+    genome.min = '0'
+    genome.placeholder = 'Choose a genome'
+    genome.onchange = (e: any) => {
+      const index = parseInt(e.target.value)
+      if (index <= this.neat.population.length) {
+        this.currentGenome = this.neat.population[index]
+        console.log(this.currentGenome)
+      } else {
+        console.log('Index out of bonds :(', index)
+      }
+    }
+
+    controlsDiv.appendChild(genome)
 
     // Adiciona o div de controles ao div principal
     visualizationDiv.appendChild(controlsDiv)
@@ -381,7 +412,7 @@ export class Evolution {
     this.isEvolutionRunning = true
     this.evolutionInterval = setInterval(() => {
       this.neat.evolve()
-      this.drawNetwork(this.neat.bestGenome)
+      this.drawNetwork(this.currentGenome)
       this.updateChart()
       this.updateStatsDisplay()
 
@@ -405,7 +436,7 @@ export class Evolution {
       this.fitnessChart.data.datasets.forEach((dataset: any) => (dataset.data = []))
       this.fitnessChart.update()
     }
-    this.drawNetwork(this.neat.population[0])
+    this.drawNetwork(this.currentGenome)
     this.updateStatsDisplay()
   }
 

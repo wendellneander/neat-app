@@ -8,6 +8,8 @@ type GenomeParams = {
 }
 
 export default class Genome {
+  static counter: number = 1
+  id: number
   nodes: Node[]
   connections: Connection[]
   fitness: number
@@ -20,6 +22,8 @@ export default class Genome {
     nodeMutationRate,
     connectionMutationRate,
   }: GenomeParams) {
+    Genome.counter++
+    this.id = Genome.counter
     this.nodes = []
     this.connections = []
     this.fitness = 0
