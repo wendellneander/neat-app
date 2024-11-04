@@ -112,7 +112,8 @@ export default class Genome {
       const from = this.nodes[Math.floor(Math.random() * this.nodes.length)]
       const to = this.nodes[Math.floor(Math.random() * this.nodes.length)]
       if (from && to && from.id !== to.id) {
-        this.connections.push(new Connection(from, to, Math.random() * 2 - 1))
+        const weight = Math.random() * 2 - 1
+        this.connections.push(new Connection(from, to, weight))
         shouldUpdateCoordinates = true
       }
     }
@@ -123,15 +124,14 @@ export default class Genome {
   }
 
   updateCoordinates() {
-    const inputLength = this.hiddenNodes().length
+    const inputLength = this.inputNodes().length
     const hiddenLength = this.hiddenNodes().length
-    const outputLength = this.hiddenNodes().length
+    const outputLength = this.outputNodes().length
 
     const layerX = this.canvasWidth / 4
     const inputY = this.canvasHeight / (inputLength + 2)
     const outputY = this.canvasHeight / (outputLength + 2)
     const hiddenY = this.canvasHeight / (hiddenLength + 2)
-
     
     let inputIndex = 1
     let hiddenIndex = 1

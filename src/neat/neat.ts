@@ -75,7 +75,7 @@ export default class NEAT {
           )
         }
       }
-
+      genome.updateCoordinates()
       this.population.push(genome)
     }
 
@@ -104,6 +104,7 @@ export default class NEAT {
     while (newPopulation.length < this.populationSize) {
       const parent = this.selection()
       if (parent) {
+        // TODO: add crossover
         const offspring = parent.clone()
         offspring.mutate()
         newPopulation.push(offspring)

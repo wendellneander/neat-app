@@ -12,6 +12,8 @@ export type EvolutionParams = {
   weightMutationRate: number
   nodeMutationRate: number
   connectionMutationRate: number
+  inputSize: number
+  outputSize: number
 }
 
 export class Evolution {
@@ -37,8 +39,10 @@ export class Evolution {
   private connectionMutationRate: number
   private currentGenome: Genome | null
   private seeBestGenome: boolean = true
+  private inputSize: number
+  private outputSize: number
 
-  constructor({ canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, connectionMutationRate, weightMutationRate, nodeMutationRate }: EvolutionParams) {
+  constructor({ inputSize, outputSize, canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, connectionMutationRate, weightMutationRate, nodeMutationRate }: EvolutionParams) {
     this.isEvolutionRunning = false
     this.targetFitness = targetFitness
     this.populationSize = populationSize
@@ -46,6 +50,8 @@ export class Evolution {
     this.canvasHeight = canvasHeight
     this.populationCanvasWidth = populationCanvasWidth
     this.populationCanvasHeight = populationCanvasHeight
+    this.inputSize = inputSize
+    this.outputSize = outputSize
 
     this.weightMutationRate = weightMutationRate
     this.nodeMutationRate = nodeMutationRate
@@ -60,8 +66,8 @@ export class Evolution {
   initializeNEAT() {
     this.neat = new NEAT({
       populationSize: this.populationSize,
-      inputSize: 2,
-      outputSize: 1,
+      inputSize: this.inputSize,
+      outputSize: this.outputSize,
       canvasWidth: this.networkCanvas?.clientWidth || 0,
       canvasHeight: this.networkCanvas?.clientHeight || 0,
       weightMutationRate: this.weightMutationRate,
@@ -70,7 +76,6 @@ export class Evolution {
     })
     this.neat.bestGenome = this.neat.population[0].clone()
     this.currentGenome = this.neat.bestGenome
-    console.log(this)
   }
 
   initializeChart() {
@@ -426,6 +431,7 @@ export class Evolution {
   }
 
   pauseEvolution() {
+    console.log(this)
     this.isEvolutionRunning = false
     clearInterval(this.evolutionInterval)
   }

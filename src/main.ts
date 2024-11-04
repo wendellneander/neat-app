@@ -10,7 +10,9 @@ const params: EvolutionParams = {
   targetFitness: 95,
   weightMutationRate: 0.8,
   nodeMutationRate: 0.03,
-  connectionMutationRate: 0.06
+  connectionMutationRate: 0.06,
+  inputSize: 2,
+  outputSize: 1
 }
 const evolution = new Evolution(params)
 document.querySelector<HTMLDivElement>('#app')!.appendChild(evolution.view)
