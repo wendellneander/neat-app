@@ -24,4 +24,8 @@ export default class Node {
     this.y = y
     this.value = value
   }
+
+  clone(): Node {
+    return new Node(this.id, this.type, this.x, this.y, this.value)
+  }
 }

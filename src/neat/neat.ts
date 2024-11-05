@@ -11,6 +11,7 @@ type NeatParams = {
   weightMutationRate: number
   nodeMutationRate: number
   connectionMutationRate: number
+  crossoverRate: number
 }
 
 export default class NEAT {
@@ -18,6 +19,7 @@ export default class NEAT {
   population: Genome[]
   generation: number
   bestGenome: Genome | null
+  crossoverRate: number
 
   constructor({
     populationSize,
@@ -28,11 +30,13 @@ export default class NEAT {
     weightMutationRate,
     nodeMutationRate,
     connectionMutationRate,
+    crossoverRate,
   }: NeatParams) {
     this.populationSize = populationSize
     this.population = []
     this.generation = 0
     this.bestGenome = null
+    this.crossoverRate = crossoverRate
 
     const layerX = canvasWidth / 4
     const inputY = canvasHeight / 3
@@ -44,7 +48,7 @@ export default class NEAT {
         nodeMutationRate,
         connectionMutationRate,
         canvasWidth,
-        canvasHeight
+        canvasHeight,
       })
 
       for (let j = 0; j < inputSize; j++) {
@@ -55,12 +59,7 @@ export default class NEAT {
 
       for (let j = 0; j < outputSize; j++) {
         genome.nodes.push(
-          new Node(
-            genome.nodes.length,
-            NodeTypes.OUTPUT,
-            2 * layerX,
-            outputY
-          )
+          new Node(genome.nodes.length, NodeTypes.OUTPUT, 2 * layerX, outputY)
         )
       }
 
@@ -83,29 +82,31 @@ export default class NEAT {
   }
 
   evolve() {
+    // Evaluate and sort population
     this.population.forEach((genome) => {
       genome.fitness = this.evaluateFitness(genome)
     })
-
     this.population.sort((a, b) => b.fitness - a.fitness)
 
-    if (
-      !this.bestGenome ||
-      this.population[0].fitness > this.bestGenome.fitness
-    ) {
+    // Update best genome if necessary
+    if (!this.bestGenome || this.population[0].fitness > this.bestGenome.fitness) {
       this.bestGenome = this.population[0].clone()
     }
 
     const newPopulation = []
+    
+    // Keep the top 20% performers
     for (let i = 0; i < Math.floor(this.populationSize * 0.2); i++) {
       newPopulation.push(this.population[i].clone())
     }
 
+    // Fill the rest with crossover and mutation
     while (newPopulation.length < this.populationSize) {
-      const parent = this.selection()
-      if (parent) {
-        // TODO: add crossover
-        const offspring = parent.clone()
+      const parent1 = this.selection()
+      const parent2 = this.selection()
+      
+      if (parent1 && parent2) {
+        const offspring = this.crossover(parent1, parent2)
         offspring.mutate()
         newPopulation.push(offspring)
       }
@@ -166,5 +167,70 @@ export default class NEAT {
     }
 
     return outputs
+  }
+
+  crossover(parent1: Genome, parent2: Genome): Genome {
+    // Create a new offspring genome with the same parameters as parents
+    const offspring = new Genome({
+      weightMutationRate: parent1.weightMutationRate,
+      nodeMutationRate: parent1.nodeMutationRate,
+      connectionMutationRate: parent1.connectionMutationRate,
+      canvasWidth: parent1.canvasWidth,
+      canvasHeight: parent1.canvasHeight,
+    })
+
+    // Copy all nodes from the fitter parent
+    const fitParent = parent1.fitness > parent2.fitness ? parent1 : parent2
+    offspring.nodes = fitParent.nodes.map((node) => node.clone())
+
+    // Create maps of connections for easy lookup
+    const p1Connections = new Map(
+      parent1.connections.map((conn) => [
+        `${conn.fromNode.id}-${conn.toNode.id}`,
+        conn,
+      ])
+    )
+    const p2Connections = new Map(
+      parent2.connections.map((conn) => [
+        `${conn.fromNode.id}-${conn.toNode.id}`,
+        conn,
+      ])
+    )
+
+    // Iterate through all connections in both parents
+    const allConnectionKeys = new Set([
+      ...p1Connections.keys(),
+      ...p2Connections.keys(),
+    ])
+
+    allConnectionKeys.forEach((key) => {
+      const conn1 = p1Connections.get(key)
+      const conn2 = p2Connections.get(key)
+
+      if (conn1 && conn2) {
+        // If both parents have the connection, randomly choose one
+        const selectedConn = Math.random() < this.crossoverRate ? conn1 : conn2
+        const newConn = selectedConn.clone()
+        newConn.fromNode = offspring.nodes[selectedConn.fromNode.id]
+        newConn.toNode = offspring.nodes[selectedConn.toNode.id]
+        offspring.connections.push(newConn)
+      } else {
+        // If only one parent has the connection, inherit from the fitter parent
+        const conn = conn1 || conn2
+        if (
+          conn &&
+          ((parent1.fitness > parent2.fitness && conn1) ||
+            (parent2.fitness >= parent1.fitness && conn2))
+        ) {
+          const newConn = conn.clone()
+          newConn.fromNode = offspring.nodes[conn.fromNode.id]
+          newConn.toNode = offspring.nodes[conn.toNode.id]
+          offspring.connections.push(newConn)
+        }
+      }
+    })
+
+    offspring.updateCoordinates()
+    return offspring
   }
 }

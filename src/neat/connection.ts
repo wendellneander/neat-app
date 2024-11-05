@@ -28,8 +28,16 @@ export default class Connection {
     return { x, y }
   }
 
+  clone(): Connection {
+    return new Connection(
+      this.fromNode,
+      this.toNode,
+      this.weight,
+      this.innovation
+    )
+  }
+
   static getInnovationNumber(): number {
-    Connection.counter++
-    return Connection.counter
+    return ++Connection.counter
   }
 }

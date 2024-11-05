@@ -14,6 +14,7 @@ export type EvolutionParams = {
   connectionMutationRate: number
   inputSize: number
   outputSize: number
+  crossoverRate: number
 }
 
 export class Evolution {
@@ -37,12 +38,26 @@ export class Evolution {
   private weightMutationRate: number
   private nodeMutationRate: number
   private connectionMutationRate: number
+  private crossoverRate: number
   private currentGenome: Genome | null
   private seeBestGenome: boolean = true
   private inputSize: number
   private outputSize: number
 
-  constructor({ inputSize, outputSize, canvasWidth, canvasHeight, populationCanvasWidth, populationCanvasHeight, targetFitness, populationSize, connectionMutationRate, weightMutationRate, nodeMutationRate }: EvolutionParams) {
+  constructor({
+    inputSize,
+    outputSize,
+    canvasWidth,
+    canvasHeight,
+    populationCanvasWidth,
+    populationCanvasHeight,
+    targetFitness,
+    populationSize,
+    connectionMutationRate,
+    weightMutationRate,
+    nodeMutationRate,
+    crossoverRate,
+  }: EvolutionParams) {
     this.isEvolutionRunning = false
     this.targetFitness = targetFitness
     this.populationSize = populationSize
@@ -56,8 +71,9 @@ export class Evolution {
     this.weightMutationRate = weightMutationRate
     this.nodeMutationRate = nodeMutationRate
     this.connectionMutationRate = connectionMutationRate
+    this.crossoverRate = crossoverRate
     this.currentGenome = null
-    
+
     this.createView()
     this.initializeNEAT()
     this.initializeChart()
@@ -73,6 +89,7 @@ export class Evolution {
       weightMutationRate: this.weightMutationRate,
       nodeMutationRate: this.nodeMutationRate,
       connectionMutationRate: this.connectionMutationRate,
+      crossoverRate: this.crossoverRate,
     })
     this.neat.bestGenome = this.neat.population[0].clone()
     this.currentGenome = this.neat.bestGenome
@@ -80,7 +97,7 @@ export class Evolution {
 
   initializeChart() {
     if (!this.view) {
-      throw new Error('No view created. Please create a view first.')
+      throw new Error("No view created. Please create a view first.")
     }
     Chart.register(...registerables)
     this.fitnessChart = new Chart(this.populationCtx, {
@@ -124,8 +141,8 @@ export class Evolution {
     const statisticsVisualization = this.createStatisticsView()
     const paramsInputVisualization = this.createParamsInputView()
 
-    const containerDiv = document.createElement('div')
-    containerDiv.className = 'container'
+    const containerDiv = document.createElement("div")
+    containerDiv.className = "container"
 
     containerDiv.appendChild(networkVisualization)
     containerDiv.appendChild(populationVisualization)
@@ -137,62 +154,64 @@ export class Evolution {
 
   createNetworkView(): HTMLElement {
     // Cria o div principal
-    const visualizationDiv = document.createElement('div')
-    visualizationDiv.className = 'visualization'
+    const visualizationDiv = document.createElement("div")
+    visualizationDiv.className = "visualization"
 
     // Cria o título
-    const title = document.createElement('h2')
-    title.textContent = 'Network Visualization'
+    const title = document.createElement("h2")
+    title.textContent = "Network Visualization"
     visualizationDiv.appendChild(title)
 
     // Cria o canvas
     this.networkCanvas = <HTMLCanvasElement>document.createElement("canvas")
-    this.networkCtx = <CanvasRenderingContext2D>this.networkCanvas.getContext("2d")
+    this.networkCtx = <CanvasRenderingContext2D>(
+      this.networkCanvas.getContext("2d")
+    )
     this.networkCanvas.width = this.canvasWidth
     this.networkCanvas.height = this.canvasHeight
-    this.networkCanvas.id = 'networkCanvas'
+    this.networkCanvas.id = "networkCanvas"
     visualizationDiv.appendChild(this.networkCanvas)
 
     // Cria o div de controles
-    const controlsDiv = document.createElement('div')
-    controlsDiv.className = 'controls'
+    const controlsDiv = document.createElement("div")
+    controlsDiv.className = "controls"
 
     // Botão Start Evolution
-    const startButton = document.createElement('button')
-    startButton.textContent = 'Start Evolution'
+    const startButton = document.createElement("button")
+    startButton.textContent = "Start Evolution"
     startButton.onclick = () => {
       if (this.isEvolutionRunning) {
         this.pauseEvolution()
-        startButton.textContent = 'Resume Evolution'
+        startButton.textContent = "Resume Evolution"
       } else {
         this.startEvolution()
-        startButton.textContent = 'Pause Evolution'
+        startButton.textContent = "Pause Evolution"
       }
     }
 
     controlsDiv.appendChild(startButton)
 
     // Botão Reset
-    const resetButton = document.createElement('button')
-    resetButton.textContent = 'Reset'
+    const resetButton = document.createElement("button")
+    resetButton.textContent = "Reset"
     resetButton.onclick = () => {
       this.resetEvolution()
-      startButton.textContent = 'Start Evolution'
+      startButton.textContent = "Start Evolution"
     }
     controlsDiv.appendChild(resetButton)
 
-    const seeBestButton = document.createElement('button')
-    seeBestButton.textContent = 'See best'
+    const seeBestButton = document.createElement("button")
+    seeBestButton.textContent = "See best"
     seeBestButton.onclick = () => {
       this.seeBestGenome = true
     }
     controlsDiv.appendChild(seeBestButton)
 
-    const genome = document.createElement('input')
-    genome.id = 'genome'
-    genome.type = 'number'
-    genome.min = '0'
-    genome.placeholder = 'Choose a genome'
+    const genome = document.createElement("input")
+    genome.id = "genome"
+    genome.type = "number"
+    genome.min = "0"
+    genome.placeholder = "Choose a genome"
     genome.onchange = (e: any) => {
       const index = parseInt(e.target.value)
       if (index <= this.neat.population.length) {
@@ -200,7 +219,7 @@ export class Evolution {
         this.currentGenome = this.neat.population[index]
         console.log(this.currentGenome)
       } else {
-        console.log('Index out of bonds :(', index)
+        console.log("Index out of bonds :(", index)
       }
     }
 
@@ -213,69 +232,71 @@ export class Evolution {
 
   createPopulationView() {
     // Cria o div principal para a visualização
-    const visualizationDiv = document.createElement('div')
-    visualizationDiv.className = 'visualization'
-  
+    const visualizationDiv = document.createElement("div")
+    visualizationDiv.className = "visualization"
+
     // Cria o título "Population Fitness"
-    const title = document.createElement('h2')
-    title.textContent = 'Population Fitness'
+    const title = document.createElement("h2")
+    title.textContent = "Population Fitness"
     visualizationDiv.appendChild(title)
-  
+
     // Cria o elemento canvas com id "populationCanvas"
     this.populationCanvas = <HTMLCanvasElement>document.createElement("canvas")
-    this.populationCtx = <CanvasRenderingContext2D>this.populationCanvas.getContext("2d")
+    this.populationCtx = <CanvasRenderingContext2D>(
+      this.populationCanvas.getContext("2d")
+    )
     this.populationCanvas.width = this.populationCanvasWidth
     this.populationCanvas.height = this.populationCanvasHeight
-    this.networkCanvas.id = 'populationCanvas'
+    this.networkCanvas.id = "populationCanvas"
     visualizationDiv.appendChild(this.populationCanvas)
     return visualizationDiv
   }
 
   createParamsInputView(): HTMLElement {
     // Div principal para visualização
-    const visualizationDiv = document.createElement('div')
-    visualizationDiv.className = 'visualization'
+    const visualizationDiv = document.createElement("div")
+    visualizationDiv.className = "visualization"
 
     // Div para os controles de parâmetros
-    const parameterControlsDiv = document.createElement('div')
-    parameterControlsDiv.className = 'parameter-controls'
+    const parameterControlsDiv = document.createElement("div")
+    parameterControlsDiv.className = "parameter-controls"
 
     // Título dos parâmetros
-    const parameterTitle = document.createElement('h3')
-    parameterTitle.textContent = 'Simulation Parameters'
+    const parameterTitle = document.createElement("h3")
+    parameterTitle.textContent = "Simulation Parameters"
     parameterControlsDiv.appendChild(parameterTitle)
 
     // Controle para Population Size
-    const populationLabel = document.createElement('label')
-    populationLabel.textContent = 'Population Size: '
-    const populationInput = document.createElement('input')
-    populationInput.id = 'populationSize'
-    populationInput.type = 'number'
-    populationInput.min = '10'
-    populationInput.max = '200'
+    const populationLabel = document.createElement("label")
+    populationLabel.textContent = "Population Size: "
+    const populationInput = document.createElement("input")
+    populationInput.id = "populationSize"
+    populationInput.type = "number"
+    populationInput.min = "10"
+    populationInput.max = "200"
     populationInput.value = `${this.populationSize}`
     populationInput.onchange = (e: any) => {
       const parsed = parseInt(e.target?.value)
       this.populationSize = parsed
-      console.log('new population size:', parsed)
+      console.log("new population size:", parsed)
     }
     populationLabel.appendChild(populationInput)
     parameterControlsDiv.appendChild(populationLabel)
 
     // Controle para Target Solution Fitness
-    const fitnessLabel = document.createElement('label')
-    fitnessLabel.textContent = 'Target Solution Fitness: '
-    const fitnessInput = document.createElement('input')
-    fitnessInput.id = 'targetFitness'
-    fitnessInput.type = 'number'
-    fitnessInput.step = '0.01'
-    fitnessInput.min = '0'
-    fitnessInput.max = '1'
+    const fitnessLabel = document.createElement("label")
+    fitnessLabel.textContent = "Target Solution Fitness: "
+    const fitnessInput = document.createElement("input")
+    fitnessInput.id = "targetFitness"
+    fitnessInput.type = "number"
+    fitnessInput.step = "0.01"
+    fitnessInput.min = "0"
+    fitnessInput.max = "1"
     fitnessInput.value = `${this.targetFitness}`
     fitnessInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.targetFitness = parsed
-      console.log('new target fitness value:', parsed)
+      console.log("new target fitness value:", parsed)
     }
     fitnessLabel.appendChild(fitnessInput)
     parameterControlsDiv.appendChild(fitnessLabel)
@@ -284,64 +305,64 @@ export class Evolution {
     visualizationDiv.appendChild(parameterControlsDiv)
 
     // Div para os controles de mutação
-    const mutationControlsDiv = document.createElement('div')
-    mutationControlsDiv.className = 'mutation-controls'
+    const mutationControlsDiv = document.createElement("div")
+    mutationControlsDiv.className = "mutation-controls"
 
     // Título dos controles de mutação
-    const mutationTitle = document.createElement('h3')
-    mutationTitle.textContent = 'Mutation Rates'
+    const mutationTitle = document.createElement("h3")
+    mutationTitle.textContent = "Mutation Rates"
     mutationControlsDiv.appendChild(mutationTitle)
 
     // Controle para Weight Mutation Rate
-    const weightLabel = document.createElement('label')
-    weightLabel.textContent = 'Weight Mutation Rate: '
-    const weightInput = document.createElement('input')
-    weightInput.id = 'weightMutationRate'
-    weightInput.type = 'number'
-    weightInput.step = '0.01'
-    weightInput.min = '0'
-    weightInput.max = '1'
+    const weightLabel = document.createElement("label")
+    weightLabel.textContent = "Weight Mutation Rate: "
+    const weightInput = document.createElement("input")
+    weightInput.id = "weightMutationRate"
+    weightInput.type = "number"
+    weightInput.step = "0.01"
+    weightInput.min = "0"
+    weightInput.max = "1"
     weightInput.value = `${this.weightMutationRate}`
     weightInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.weightMutationRate = parsed
-      console.log('new weight mutation rate:', parsed)
+      console.log("new weight mutation rate:", parsed)
     }
     weightLabel.appendChild(weightInput)
     mutationControlsDiv.appendChild(weightLabel)
 
     // Controle para Node Mutation Rate
-    const nodeLabel = document.createElement('label')
-    nodeLabel.textContent = 'Node Mutation Rate: '
-    const nodeInput = document.createElement('input')
-    nodeInput.id = 'nodeMutationRate'
-    nodeInput.type = 'number'
-    nodeInput.step = '0.01'
-    nodeInput.min = '0'
-    nodeInput.max = '1'
+    const nodeLabel = document.createElement("label")
+    nodeLabel.textContent = "Node Mutation Rate: "
+    const nodeInput = document.createElement("input")
+    nodeInput.id = "nodeMutationRate"
+    nodeInput.type = "number"
+    nodeInput.step = "0.01"
+    nodeInput.min = "0"
+    nodeInput.max = "1"
     nodeInput.value = `${this.nodeMutationRate}`
     nodeInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.nodeMutationRate = parsed
-      console.log('new node mutation rate:', parsed)
+      console.log("new node mutation rate:", parsed)
     }
     nodeLabel.appendChild(nodeInput)
     mutationControlsDiv.appendChild(nodeLabel)
 
     // Controle para Connection Mutation Rate
-    const connectionLabel = document.createElement('label')
-    connectionLabel.textContent = 'Connection Mutation Rate: '
-    const connectionInput = document.createElement('input')
-    connectionInput.id = 'connectionMutationRate'
-    connectionInput.type = 'number'
-    connectionInput.step = '0.01'
-    connectionInput.min = '0'
-    connectionInput.max = '1'
+    const connectionLabel = document.createElement("label")
+    connectionLabel.textContent = "Connection Mutation Rate: "
+    const connectionInput = document.createElement("input")
+    connectionInput.id = "connectionMutationRate"
+    connectionInput.type = "number"
+    connectionInput.step = "0.01"
+    connectionInput.min = "0"
+    connectionInput.max = "1"
     connectionInput.value = `${this.connectionMutationRate}`
     connectionInput.onchange = (e: any) => {
       const parsed = parseFloat(e.target?.value)
       this.connectionMutationRate = parsed
-      console.log('new connection mutation rate:', parsed)
+      console.log("new connection mutation rate:", parsed)
     }
     connectionLabel.appendChild(connectionInput)
     mutationControlsDiv.appendChild(connectionLabel)
@@ -353,17 +374,17 @@ export class Evolution {
 
   createStatisticsView(): HTMLElement {
     // Cria o div principal para as estatísticas
-    const statsDiv = document.createElement('div')
-    statsDiv.className = 'stats'
+    const statsDiv = document.createElement("div")
+    statsDiv.className = "stats"
 
     // Cria o título "Statistics"
-    const title = document.createElement('h2')
-    title.textContent = 'Statistics'
+    const title = document.createElement("h2")
+    title.textContent = "Statistics"
     statsDiv.appendChild(title)
 
     // Cria o div para exibir as estatísticas
-    const statsDisplay = document.createElement('div')
-    statsDisplay.id = 'stats-display'
+    const statsDisplay = document.createElement("div")
+    statsDisplay.id = "stats-display"
     statsDiv.appendChild(statsDisplay)
     this.statisticsDisplay = statsDisplay
     return statsDiv
@@ -377,12 +398,12 @@ export class Evolution {
     stats.push(`Fitness: ${this.currentGenome?.fitness.toFixed(4)}`)
     stats.push(`Nodes: ${this.currentGenome?.nodes.length}`)
     stats.push(`Connections: ${this.currentGenome?.connections.length}`)
-    this.statisticsDisplay.textContent = stats.join('\n')
+    this.statisticsDisplay.textContent = stats.join("\n")
   }
 
   updateChart() {
     if (!this.fitnessChart) {
-      throw new Error('no fitness chart created')
+      throw new Error("no fitness chart created")
     }
 
     const avgFitness =
@@ -399,7 +420,9 @@ export class Evolution {
 
     if (this.fitnessChart.data.labels.length > 50) {
       this.fitnessChart.data.labels.shift()
-      this.fitnessChart.data.datasets.forEach((dataset: any) => dataset.data.shift())
+      this.fitnessChart.data.datasets.forEach((dataset: any) =>
+        dataset.data.shift()
+      )
     }
 
     this.fitnessChart.update()
@@ -414,7 +437,7 @@ export class Evolution {
     this.isEvolutionRunning = true
     this.evolutionInterval = setInterval(() => {
       this.neat.evolve()
-      
+
       if (this.seeBestGenome) {
         this.currentGenome = this.neat.bestGenome
       }
@@ -441,7 +464,9 @@ export class Evolution {
     this.initializeNEAT()
     if (this.fitnessChart) {
       this.fitnessChart.data.labels = []
-      this.fitnessChart.data.datasets.forEach((dataset: any) => (dataset.data = []))
+      this.fitnessChart.data.datasets.forEach(
+        (dataset: any) => (dataset.data = [])
+      )
       this.fitnessChart.update()
     }
     this.drawNetwork(this.currentGenome)
@@ -452,8 +477,13 @@ export class Evolution {
     if (!genome) {
       return
     }
-    
-    this.networkCtx.clearRect(0, 0, this.networkCanvas.width, this.networkCanvas.height)
+
+    this.networkCtx.clearRect(
+      0,
+      0,
+      this.networkCanvas.width,
+      this.networkCanvas.height
+    )
 
     genome.connections.forEach((conn) => {
       this.networkCtx.beginPath()
@@ -462,8 +492,8 @@ export class Evolution {
       this.networkCtx.strokeStyle = conn.enabled
         ? "rgba(33, 150, 243, 0.6)"
         : "rgba(255, 0, 0, 0.3)"
-        this.networkCtx.lineWidth = Math.abs(conn.weight) * 4
-        this.networkCtx.stroke()
+      this.networkCtx.lineWidth = Math.abs(conn.weight) * 4
+      this.networkCtx.stroke()
     })
 
     genome.nodes.forEach((node) => {
@@ -476,11 +506,11 @@ export class Evolution {
           ? "#FFC107"
           : "#F44336"
       this.networkCtx.fill()
-      this.networkCtx.font = "12px Arial";
-      this.networkCtx.fillStyle = "black";
+      this.networkCtx.font = "12px Arial"
+      this.networkCtx.fillStyle = "black"
       const offsetX = node.id > 9 ? 6 : 4
       const offsetY = node.id > 9 ? 5 : 4
-      this.networkCtx.fillText(`${node.id}`,node.x - offsetX,node.y + offsetY);
+      this.networkCtx.fillText(`${node.id}`, node.x - offsetX, node.y + offsetY)
     })
   }
 }

@@ -26,7 +26,7 @@ export default class Genome {
     nodeMutationRate,
     connectionMutationRate,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
   }: GenomeParams) {
     Genome.counter++
     this.id = Genome.counter
@@ -58,7 +58,7 @@ export default class Genome {
       nodeMutationRate: this.nodeMutationRate,
       connectionMutationRate: this.connectionMutationRate,
       canvasHeight: this.canvasHeight,
-      canvasWidth: this.canvasWidth
+      canvasWidth: this.canvasWidth,
     })
     clonedGenome.nodes = this.nodes.map((node) => {
       const newNode = new Node(node.id, node.type, node.x, node.y, node.value)
@@ -132,7 +132,7 @@ export default class Genome {
     const inputY = this.canvasHeight / (inputLength + 2)
     const outputY = this.canvasHeight / (outputLength + 2)
     const hiddenY = this.canvasHeight / (hiddenLength + 2)
-    
+
     let inputIndex = 1
     let hiddenIndex = 1
     let outputIndex = 1
@@ -153,14 +153,18 @@ export default class Genome {
       }
 
       // update connections
-      this.connections.filter(conn => conn.fromNode.id === node.id).map(conn => {
-        conn.fromNode = node
-        return conn
-      })
-      this.connections.filter(conn => conn.toNode.id === node.id).map(conn => {
-        conn.toNode = node
-        return conn
-      })
+      this.connections
+        .filter((conn) => conn.fromNode.id === node.id)
+        .map((conn) => {
+          conn.fromNode = node
+          return conn
+        })
+      this.connections
+        .filter((conn) => conn.toNode.id === node.id)
+        .map((conn) => {
+          conn.toNode = node
+          return conn
+        })
     })
   }
 }
