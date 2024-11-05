@@ -43,6 +43,7 @@ export class Evolution {
   private seeBestGenome: boolean = true
   private inputSize: number
   private outputSize: number
+  private shouldInitializeNEAT: boolean = false
 
   constructor({
     inputSize,
@@ -73,6 +74,8 @@ export class Evolution {
     this.connectionMutationRate = connectionMutationRate
     this.crossoverRate = crossoverRate
     this.currentGenome = null
+
+    this.shouldInitializeNEAT = true
 
     this.createView()
     this.initializeNEAT()
@@ -117,12 +120,11 @@ export class Evolution {
             borderColor: "#2196F3",
             tension: 0.1,
           },
-          ...Array.from({ length: 10 }, (_, i) => ({
+          ...Array.from({ length: 5 }, (_, i) => ({
             label: `Genome ${i + 1}`,
             data: [],
-            borderColor: `hsl(${i * 36}, 100%, 50%)`,
+            borderColor: `hsl(${i * 72}, 100%, 50%)`,
             tension: 0.1,
-            hidden: i >= this.neat.populationSize ? true : false,
           })),
         ],
       },
@@ -414,8 +416,8 @@ export class Evolution {
     this.fitnessChart.data.datasets[0].data.push(this.neat.bestGenome?.fitness)
     this.fitnessChart.data.datasets[1].data.push(avgFitness)
 
-    this.neat.population.slice(0, 10).forEach((genome, index) => {
-      this.fitnessChart.data.datasets[index].data.push(genome.fitness)
+    this.neat.population.slice(0, 5).forEach((genome, index) => {
+      this.fitnessChart.data.datasets[index + 2].data.push(genome.fitness)
     })
 
     if (this.fitnessChart.data.labels.length > 50) {
@@ -433,7 +435,10 @@ export class Evolution {
       return
     }
 
-    this.initializeNEAT()
+    if (this.shouldInitializeNEAT) {
+      this.initializeNEAT()
+      this.shouldInitializeNEAT = false
+    }
     this.isEvolutionRunning = true
     this.evolutionInterval = setInterval(() => {
       this.neat.evolve()
@@ -460,6 +465,7 @@ export class Evolution {
   }
 
   resetEvolution() {
+    this.shouldInitializeNEAT = true
     this.pauseEvolution()
     this.initializeNEAT()
     if (this.fitnessChart) {
