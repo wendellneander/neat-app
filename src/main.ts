@@ -6,14 +6,14 @@ const params: EvolutionParams = {
   canvasHeight: 400,
   populationCanvasWidth: 500,
   populationCanvasHeight: 400,
-  populationSize: 10,
+  populationSize: 150,
   targetFitness: 0.95,
-  weightMutationRate: 0.7,
-  nodeMutationRate: 0.03,
-  connectionMutationRate: 0.06,
+  weightMutationRate: 0.9,
+  nodeMutationRate: 0.1,
+  connectionMutationRate: 0.15,
   inputSize: 2,
   outputSize: 1,
-  crossoverRate: 0.3,
+  crossoverRate: 0.8,
 }
 const evolution = new Evolution(params)
 document.querySelector<HTMLDivElement>("#app")!.appendChild(evolution.view)

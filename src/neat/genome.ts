@@ -80,41 +80,72 @@ export default class Genome {
   mutate() {
     let shouldUpdateCoordinates: boolean = false
 
+    // Weight mutation
     if (Math.random() < this.weightMutationRate) {
       this.connections.forEach((conn) => {
         if (Math.random() < 0.1) {
-          conn.weight += (Math.random() * 2 - 1) * 0.5
+          // Perturbação pequena ou reinicialização completa
+          if (Math.random() < 0.7) {
+            conn.weight += (Math.random() * 2 - 1) * 0.5
+          } else {
+            conn.weight = Math.random() * 4 - 2 // Pesos entre -2 e 2
+          }
         }
       })
     }
 
+    // Node mutation
     if (Math.random() < this.nodeMutationRate) {
       if (this.connections.length > 0) {
-        // disbale random connection
-        const connIndex = Math.floor(Math.random() * this.connections.length)
-        const conn = this.connections[connIndex]
-        conn.enabled = false
+        // Seleciona conexões habilitadas apenas
+        const enabledConnections = this.connections.filter(
+          (conn) => conn.enabled
+        )
+        if (enabledConnections.length > 0) {
+          const connIndex = Math.floor(
+            Math.random() * enabledConnections.length
+          )
+          const conn = enabledConnections[connIndex]
+          conn.enabled = false
 
-        // create a new node in the middle
-        const { x, y } = conn.getMiddle()
-        const newNode = new Node(this.nodes.length, NodeTypes.HIDDEN, x, y)
-        this.nodes.push(newNode)
+          const { x, y } = conn.getMiddle()
+          const newNode = new Node(this.nodes.length, NodeTypes.HIDDEN, x, y)
+          this.nodes.push(newNode)
 
-        // connect the connections to node
-        this.connections.push(new Connection(conn.fromNode, newNode, 1.0))
-        this.connections.push(new Connection(newNode, conn.toNode, conn.weight))
+          // Cria novas conexões com pesos otimizados
+          this.connections.push(new Connection(conn.fromNode, newNode, 1.0))
+          this.connections.push(
+            new Connection(newNode, conn.toNode, conn.weight)
+          )
 
-        shouldUpdateCoordinates = true
+          shouldUpdateCoordinates = true
+        }
       }
     }
 
+    // Connection mutation
     if (Math.random() < this.connectionMutationRate) {
-      const from = this.nodes[Math.floor(Math.random() * this.nodes.length)]
-      const to = this.nodes[Math.floor(Math.random() * this.nodes.length)]
-      if (from && to && from.id !== to.id) {
-        const weight = Math.random() * 2 - 1
-        this.connections.push(new Connection(from, to, weight))
-        shouldUpdateCoordinates = true
+      // Tenta várias vezes encontrar uma conexão válida
+      for (let attempts = 0; attempts < 5; attempts++) {
+        const fromNode =
+          this.nodes[Math.floor(Math.random() * this.nodes.length)]
+        const toNode = this.nodes[Math.floor(Math.random() * this.nodes.length)]
+
+        // Verifica se a conexão é válida
+        if (
+          fromNode &&
+          toNode &&
+          fromNode.id !== toNode.id &&
+          fromNode.x < toNode.x &&
+          !this.connections.some(
+            (c) => c.fromNode.id === fromNode.id && c.toNode.id === toNode.id
+          )
+        ) {
+          const weight = Math.random() * 4 - 2 // Pesos entre -2 e 2
+          this.connections.push(new Connection(fromNode, toNode, weight))
+          shouldUpdateCoordinates = true
+          break
+        }
       }
     }
 

@@ -139,34 +139,58 @@ export default class NEAT {
       { inputs: [1, 1], output: 0 },
     ]
 
-    let fitness = 0
+    let totalError = 0
     testCases.forEach((testCase) => {
-      const output = this.activate(genome, testCase.inputs)
-      fitness += 1 - Math.abs(output[0] - testCase.output)
+      const output = this.activate(genome, testCase.inputs)[0]
+      const error = Math.abs(output - testCase.output)
+      totalError += error * error // Using squared error
     })
 
-    return fitness / testCases.length
+    const fitness = 1 / (1 + totalError) // Convert error to fitness (0 to 1)
+    return fitness
   }
 
   activate(genome: Genome, inputs: number[]): number[] {
-    genome.nodes.forEach((node) => (node.value = 0))
-
-    for (let i = 0; i < inputs.length; i++) {
-      genome.nodes[i].value = inputs[i]
-    }
-
-    const outputs = []
-    genome.connections.forEach((conn) => {
-      if (conn.enabled) {
-        conn.toNode.value += conn.fromNode.value * conn.weight
+    // Reset all node values and inputs
+    genome.nodes.forEach((node) => {
+      node.value = 0
+      if (node.type === NodeTypes.INPUT) {
+        const inputIndex = genome.inputNodes().findIndex(n => n.id === node.id)
+        if (inputIndex !== -1 && inputIndex < inputs.length) {
+          node.value = inputs[inputIndex]
+        }
       }
     })
 
-    for (let i = inputs.length; i < inputs.length + 1; i++) {
-      outputs.push(Math.tanh(genome.nodes[i].value))
-    }
+    // Sort nodes topologically by x position
+    const sortedNodes = [...genome.nodes].sort((a, b) => a.x - b.x)
 
-    return outputs
+    // Process each node in order
+    sortedNodes.forEach((node) => {
+      if (node.type !== NodeTypes.INPUT) {
+        // Get all incoming connections to this node
+        const incomingConnections = genome.connections.filter(
+          conn => conn.enabled && conn.toNode.id === node.id
+        )
+
+        // Sum up all inputs through incoming connections
+        let sum = 0
+        incomingConnections.forEach(conn => {
+          sum += conn.fromNode.value * conn.weight
+        })
+
+        // Apply activation function
+        node.value = this.sigmoid(sum)
+      }
+    })
+
+    // Get output values
+    return genome.outputNodes().map(node => node.value)
+  }
+
+  // Add this new sigmoid function
+  private sigmoid(x: number): number {
+    return 1 / (1 + Math.exp(-4.9 * x))
   }
 
   crossover(parent1: Genome, parent2: Genome): Genome {
